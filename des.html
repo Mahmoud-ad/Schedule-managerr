@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            margin: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 2.5em;
+        }
+        label {
+            font-size: 1.2em;
+        }
+        input[type="text"], input[type="radio"], select {
+            margin-right: 10px;
+            padding: 10px;
+            font-size: 1em;
+            border-radius: 5px;
+            border: none;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            background: #2575fc;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #6a11cb;
+            transform: scale(1.05);
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        th {
+            background: rgba(0, 0, 0, 0.4);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .delete-button {
+            padding: 10px 15px;
+            font-size: 1em;
+            color: #fff;
+            background: red;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .delete-button:hover {
+            transform: scale(1.05);
+        }
+        #summary {
+            margin: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #summary h3 {
+            margin-bottom: 15px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        ul li {
+            padding: 10px 0;
+            font-size: 1.2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        #errorMessage {
+            display: none;
+            color: red;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Schedule Manager</h1>
+
+    <div class="container">
+        <label for="customCourses">Enter Courses (comma-separated):</label>
+        <input type="text" id="customCourses" placeholder="e.g., Economics, Micro, ENGL251">
+    </div>
+
+    <div class="container">
+        <label for="customDays">Enter Days (comma-separated):</label>
+        <input type="text" id="customDays" placeholder="e.g., Monday, Tuesday, Wednesday">
+    </div>
+
+    <div class="container">
+        <label for="customTimes">Enter Times (comma-separated):</label>
+        <input type="text" id="customTimes" placeholder="e.g., 09:30-10:45, 14:00-15:15">
+    </div>
+
+    <button onclick="populateData()">Save Data</button>
+
+    <div id="errorMessage"></div>
+
+    <div class="container">
+        <label for="daySelect">Select a Day:</label>
+        <select id="daySelect" onchange="updateCourses()">
+            <option value="">Select a day</option>
+            <option value="M">Monday</option>
+            <option value="T">Tuesday</option>
+            <option value="W">Wednesday</option>
+            <option value="Th">Thursday</option>
+        </select>
+    </div>
+
+    <div class="container">
+        <label for="courses">Available Courses:</label>
+        <select id="courses" onchange="updateTimes()">
+            <option value="">Select a course</option>
+        </select>
+    </div>
+
+    <div class="container">
+        <label for="times">Available Times:</label>
+        <select id="times">
+            <option value="">Select a time</option>
+        </select>
+    </div>
+
+    <button onclick="addToTable()">Add to Table</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="scheduleTable">
+        </tbody>
+    </table>
+
+    <div id="summary" hidden>
+        <h3>Summary</h3>
+        <ul id="summaryList"></ul>
+    </div>
+
+    <script>
+        const predefinedCourses = {
+            "Economics": {
+                "T": ["14:00-15:15"],
+                "Th": ["14:00-15:15"]
+            },
+            "ENGL251": {
+                "T": ["15:30-16:45"],
+                "Th": ["15:30-16:45"],
+                "M": ["09:30-10:45"],
+                "W": ["09:30-10:45"]
+            },
+            "Micro": {
+                "M": ["14:00-15:15"],
+                "W": ["14:00-15:15"],
+                "T": ["12:30-13:45"],
+                "Th": ["12:30-13:45"]
+            },
+            "Analog Lab": {
+                "M": ["17:00-18:15", "15:30-16:45"],
+                "W": ["15:30-16:45"],
+                "T": ["15:30-16:45"]
+            },
+            "Network Lab": {
+                "M": ["11:00-12:15"],
+                "W": ["11:00-12:15"]
+            },
+            "Logic Lab": {
+                "M": ["12:30-13:45"],
+                "W": ["12:30-13:45"],
+                "Th": ["08:00-09:15"]
+            }
+        };
+
+        const registeredCourses = [];
+
+        function validateInput() {
+            const coursesInput = document.getElementById('customCourses').value.trim();
+            const daysInput = document.getElementById('customDays').value.trim();
+            const timesInput = document.getElementById('customTimes').value.trim();
+
+            if (!coursesInput || !daysInput || !timesInput) {
+                showError('Please fill in all the fields before saving.');
+                return false;
+            }
+
+            return true;
+        }
+
+        function showError(message) {
+            const errorMessageDiv = document.getElementById('errorMessage');
+            errorMessageDiv.style.display = 'block';
+            errorMessageDiv.textContent = message;
+        }
+
+        function populateData() {
+            if (!validateInput()) return;
+
+            const coursesInput = document.getElementById('customCourses').value.split(',').map(c => c.trim());
+            const daysInput = document.getElementById('customDays').value.split(',').map(d => d.trim());
+            const timesInput = document.getElementById('customTimes').value.split(',').map(t => t.trim());
+
+            const daySelect = document.getElementById('daySelect');
+            daySelect.innerHTML = '<option value="">Select a day</option>';
+
+            Object.keys(predefinedCourses).forEach(course => {
+                const option = document.createElement('option');
+                option.value = course;
+                option.textContent = course;
+                daySelect.appendChild(option);
+            });
+
+            coursesInput.forEach(course => {
+                predefinedCourses[course].forEach(day => {
+                    timesInput.forEach(time => {
+                        predefinedCourses[course][day].push({ course, time });
+                    });
+                });
+            });
+        }
+
+        function updateCourses() {
+            const day = document.getElementById('daySelect').value;
+            const coursesSelect = document.getElementById('courses');
+            coursesSelect.innerHTML = '<option value="">Select a course</option>';
+
+            if (day) {
+                Object.keys(predefinedCourses).forEach(course => {
+                    if (predefinedCourses[course][day]) {
+                        const courseOption = document.createElement('option');
+                        courseOption.value = course;
+                        courseOption.textContent = course;
+                        coursesSelect.appendChild(courseOption);
+                    }
+                });
+            }
+
+            const timesSelect = document.getElementById('times');
+            timesSelect.innerHTML = '<option value="">Select a time</option>';
+        }
+
+        function updateTimes() {
+            const day = document.getElementById('daySelect').value;
+            const selectedCourse = document.getElementById('courses').value;
+            const timesSelect = document.getElementById('times');
+            timesSelect.innerHTML = '<option value="">Select a time</option>';
+
+            if (selectedCourse && day) {
+                predefinedCourses[selectedCourse][day].forEach(time => {
+                    const timeOption = document.createElement('option');
+                    timeOption.value = time;
+                    timeOption.textContent = time;
+                    timesSelect.appendChild(timeOption);
+                });
+            }
+        }
+
+        function addToTable() {
+            const day = document.getElementById('daySelect').value;
+            const course = document.getElementById('courses').value;
+            const time = document.getElementById('times').value;
+
+            if (!day || !course || !time) {
+                showError('Please select a day, course, and time.');
+                return;
+            }
+
+            // Register course on additional day if it does not contain 'Lab'
+            let daysToRegister = [day];
+            if (!course.toLowerCase().includes('lab')) {
+                if (day === 'M') {
+                    daysToRegister.push('W');
+                } else if (day === 'W') {
+                    daysToRegister.push('M');
+                } else if (day === 'T') {
+                    daysToRegister.push('Th');
+                } else if (day === 'Th') {
+                    daysToRegister.push('T');
+                }
+            }
+
+            daysToRegister.forEach(d => {
+                registeredCourses.push({ day: d, course, time });
+            });
+
+            const table = document.getElementById('scheduleTable');
+            const row = table.insertRow();
+
+            const courseCell = row.insertCell(0);
+            const dayCell = row.insertCell(1);
+            const timeCell = row.insertCell(2);
+            const actionCell = row.insertCell(3);
+
+            courseCell.textContent = course;
+            dayCell.textContent = day;
+            timeCell.textContent = time;
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.className = 'delete-button';
+            deleteButton.onclick = () => removeFromTable(row, course, time);
+            actionCell.appendChild(deleteButton);
+        }
+
+        function removeFromTable(row, course, time) {
+            const index = registeredCourses.findIndex(item => item.course === course && item.time === time);
+            if (index > -1) {
+                registeredCourses.splice(index, 1);
+            }
+            row.remove();
+        }
+    </script>
+</body>
+</html>
